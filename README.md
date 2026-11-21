@@ -1,10 +1,3 @@
------
-To horizon devs
-
-Bros i am not a MacOS/FreeBSD dev, rust pro or smth, but whenever you see a method that is implemented in MacOS, remember that MacOS "stole" most of code from FreeBSD, thanks in advance
-
-
------
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/readme/title-dark.png">
