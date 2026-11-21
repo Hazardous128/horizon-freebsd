@@ -203,6 +203,30 @@ fn inspect_current() -> Result<(), &'static str> {
             }
         }
     }
+    #[cfg(target_os = "freebsd")]
+    {
+        unsafe {
+            let mut attr: libc::pthread_attr_t = std::mem::zeroed();
+            if libc::pthread_attr_init(&mut attr) != 0 {
+                return Err("GuestStackUnavailable: cannot inspect the calling thread stack");
+            }
+            let rc = libc::pthread_attr_get_np(libc::pthread_self(), &mut attr);
+            let mut stackaddr = std::ptr::null_mut();
+            let mut stacksize = 0;
+            let get_rc = if rc == 0 {
+                libc::pthread_attr_getstack(&attr, &mut stackaddr, &mut stacksize)
+            } else {
+                -1
+            };
+            libc::pthread_attr_destroy(&mut attr);
+            if rc != 0 || get_rc != 0 {
+                return Err("GuestStackUnavailable: cannot inspect the calling thread stack");
+            }
+            if stacksize < GUEST_STACK_BYTES + HOST_HEADROOM {
+                return Err("GuestStackUnavailable: calling thread needs 136 MiB of stack");
+            }
+        }
+    }
     #[cfg(target_vendor = "apple")]
     {
         // SAFETY: pthread_self names the live calling thread.
@@ -221,9 +245,9 @@ fn inspect_current() -> Result<(), &'static str> {
             return too_small(high - low, "GetCurrentThreadStackLimits");
         }
     }
-    #[cfg(not(any(target_os = "linux", target_vendor = "apple", windows)))]
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_vendor = "apple", windows)))]
     return Err("GuestStackUnavailable: stack inspection is unsupported on this platform");
-    #[cfg(any(target_os = "linux", target_vendor = "apple", windows))]
+    #[cfg(any(target_os = "linux", target_os = "freebsd", target_vendor = "apple", windows))]
     Ok(())
 }
 
